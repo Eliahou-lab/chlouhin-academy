@@ -12,7 +12,7 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { saveMissionBuilderAction, type EditableBlock } from "@/app/actions/missions";
 import { MarkdownPreview } from "@/components/markdown-preview";
@@ -431,12 +431,16 @@ function BlockForm({ block, onChange }: { block: DraftBlock; onChange: (patch: P
                 </div>
                 {item.type !== "divider" ? <Field label={item.type === "section" ? "Titre de section" : "Titre optionnel"} value={item.title ?? ""} onChange={(title) => updateRichItem(item.id, { title })} /> : null}
                 {item.type !== "divider" ? (
-                  <Area
-                    monospace={item.type === "terminal" || item.type === "prompt"}
-                    label={richContentInputLabel(item.type)}
-                    value={item.content ?? ""}
-                    onChange={(content) => updateRichItem(item.id, { content })}
-                  />
+                  richContentUsesMarkdown(item.type) ? (
+                    <SelectableMarkdownArea label={richContentInputLabel(item.type)} value={item.content ?? ""} onChange={(content) => updateRichItem(item.id, { content })} />
+                  ) : (
+                    <Area
+                      monospace={item.type === "terminal" || item.type === "prompt"}
+                      label={richContentInputLabel(item.type)}
+                      value={item.content ?? ""}
+                      onChange={(content) => updateRichItem(item.id, { content })}
+                    />
+                  )
                 ) : (
                   <p className="text-sm text-muted">Separateur visuel sans contenu.</p>
                 )}
@@ -538,34 +542,113 @@ function BlockForm({ block, onChange }: { block: DraftBlock; onChange: (patch: P
 }
 
 function MarkdownEditor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const tools = [
-    ["Gras", "**texte**"],
-    ["Italique", "*texte*"],
-    ["Liste", "- item"],
-    ["Code", "`code`"],
-    ["H2", "## Titre"],
-    ["H3", "### Titre"],
-    ["Citation", "> citation"],
-    ["Separateur", "---"],
-  ];
   return (
     <div className="grid gap-3 xl:grid-cols-2">
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {tools.map(([label, snippet]) => (
-            <button key={label} className="rounded border border-border px-2 py-1 text-xs" onClick={() => onChange(`${value}${value ? "\n" : ""}${snippet}`)}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <Area monospace label="Markdown" value={value} onChange={onChange} />
-      </div>
+      <SelectableMarkdownArea label="Markdown" value={value} onChange={onChange} />
       <div className="rounded-md border border-border bg-surface-2 p-4">
         <MarkdownPreview value={value} />
       </div>
     </div>
   );
 }
+
+function SelectableMarkdownArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const tools = [
+    { label: "Gras", action: () => wrapSelection("**", "**", "texte") },
+    { label: "Italique", action: () => wrapSelection("*", "*", "texte") },
+    { label: "Code", action: () => wrapSelection("`", "`", "code") },
+    { label: "Liste", action: () => insertLine("- item") },
+    { label: "H2", action: () => insertLine("## Titre") },
+    { label: "H3", action: () => insertLine("### Titre") },
+    { label: "Citation", action: () => insertLine("> citation") },
+    { label: "Separateur", action: () => insertLine("---") },
+  ];
+
+  function replaceSelection(nextText: string, cursorStart: number, cursorEnd = cursorStart) {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart;
+    const end = element.selectionEnd;
+    const next = `${value.slice(0, start)}${nextText}${value.slice(end)}`;
+    onChange(next);
+    requestAnimationFrame(() => {
+      element.focus();
+      element.setSelectionRange(cursorStart, cursorEnd);
+    });
+  }
+
+  function wrapSelection(prefix: string, suffix: string, fallback: string) {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart;
+    const end = element.selectionEnd;
+    const selected = value.slice(start, end) || fallback;
+    const nextText = `${prefix}${selected}${suffix}`;
+    replaceSelection(nextText, start + prefix.length, start + prefix.length + selected.length);
+  }
+
+  function insertLine(snippet: string) {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart;
+    const prefix = value && !value.endsWith("\n") ? "\n" : "";
+    replaceSelection(`${prefix}${snippet}`, start + prefix.length + snippet.length);
+  }
+
+  function applyColor(color: string) {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart;
+    const end = element.selectionEnd;
+    const selected = value.slice(start, end) || "texte";
+    const prefix = `{color:${color}}`;
+    const suffix = "{/color}";
+    replaceSelection(`${prefix}${selected}${suffix}`, start + prefix.length, start + prefix.length + selected.length);
+  }
+
+  return (
+    <label className="space-y-2">
+      <span className="text-sm text-muted">{label}</span>
+      <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
+        <div className="flex flex-wrap gap-2">
+          {tools.map((tool) => (
+            <button key={tool.label} type="button" className="rounded border border-border bg-surface px-2 py-1 text-xs hover:border-primary" onClick={tool.action}>
+              {tool.label}
+            </button>
+          ))}
+          <div className="flex flex-wrap items-center gap-1 border-l border-border pl-2">
+            {markdownColors.map((color) => (
+              <button
+                key={color.name}
+                type="button"
+                className="h-6 w-6 rounded-full border border-border"
+                style={{ backgroundColor: color.value }}
+                title={color.label}
+                aria-label={`Couleur ${color.label}`}
+                onClick={() => applyColor(color.name)}
+              />
+            ))}
+          </div>
+        </div>
+        <textarea ref={textareaRef} className="min-h-40 w-full rounded-md border border-border bg-surface p-3 font-mono" value={value} onChange={(event) => onChange(event.target.value)} />
+      </div>
+    </label>
+  );
+}
+
+const markdownColors = [
+  { name: "indigo", label: "Indigo", value: "#6366f1" },
+  { name: "green", label: "Vert", value: "#22c55e" },
+  { name: "yellow", label: "Jaune", value: "#eab308" },
+  { name: "red", label: "Rouge", value: "#ef4444" },
+  { name: "blue", label: "Bleu", value: "#3b82f6" },
+  { name: "cyan", label: "Cyan", value: "#06b6d4" },
+  { name: "pink", label: "Rose", value: "#ec4899" },
+  { name: "orange", label: "Orange", value: "#f97316" },
+  { name: "slate", label: "Gris", value: "#64748b" },
+  { name: "white", label: "Blanc", value: "#f8fafc" },
+];
 
 const richContentTypes: Array<{ type: RichContentKind; label: string }> = [
   { type: "markdown", label: "Texte" },
@@ -633,6 +716,10 @@ function richContentInputLabel(type: RichContentKind) {
   if (type === "prompt") return "Prompt Windsurf";
   if (type === "section") return "Description optionnelle";
   return "Contenu";
+}
+
+function richContentUsesMarkdown(type: RichContentKind) {
+  return type === "markdown" || type === "aside" || type === "quote" || type === "section";
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
