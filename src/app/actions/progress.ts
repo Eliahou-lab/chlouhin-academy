@@ -56,6 +56,9 @@ export async function submitBlockProgressAction(payload: {
       attempts,
       points_earned: wasAlreadyComplete ? existing.data?.points_earned ?? result.points : result.points,
       team_comment: payload.teamComment ?? null,
+      needs_help: false,
+      help_message: null,
+      help_requested_at: null,
       started_at: existing.data?.started_at ?? now,
       completed_at: result.status === "correct" || result.status === "completed" ? now : null,
       submitted_at: result.status === "submitted" ? now : null,
@@ -72,6 +75,31 @@ export async function submitBlockProgressAction(payload: {
 
   revalidatePath(`/team/${payload.teamId}`);
   return { ok: !error, ...result, attempts, message: error?.message };
+}
+
+export async function requestBlockHelpAction(payload: { teamId: string; blockId: string; message?: string }) {
+  const supabase = createAdminSupabaseClient();
+  const now = new Date().toISOString();
+  const { data: block, error: blockError } = await supabase.schema("academy").from("blocks").select("*").eq("id", payload.blockId).single();
+  if (blockError || !block) return { ok: false, error: "Bloc introuvable" };
+
+  const { error } = await supabase.schema("academy").from("block_progress").upsert(
+    {
+      team_id: payload.teamId,
+      block_id: block.id,
+      mission_id: block.mission_id,
+      status: "in_progress",
+      needs_help: true,
+      help_message: payload.message?.trim() || null,
+      help_requested_at: now,
+      started_at: now,
+    },
+    { onConflict: "team_id,block_id" },
+  );
+
+  revalidatePath("/admin/live");
+  revalidatePath(`/team/${payload.teamId}`);
+  return { ok: !error, error: error?.message };
 }
 
 async function awardBadge(supabase: ReturnType<typeof createAdminSupabaseClient>, teamId: string, code: string) {

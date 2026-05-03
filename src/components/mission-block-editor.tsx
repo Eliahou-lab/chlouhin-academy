@@ -43,6 +43,7 @@ export function MissionBlockEditor({ mission, blocks }: { mission: Mission; bloc
     persona_scenario: mission.persona_scenario ?? "",
     display_mode: mission.display_mode ?? "all_visible",
     is_locked: mission.is_locked ?? true,
+    is_published: mission.is_published ?? true,
   });
   const [draftBlocks, setDraftBlocks] = useState<DraftBlock[]>(
     blocks.map((block) => ({
@@ -180,6 +181,14 @@ export function MissionBlockEditor({ mission, blocks }: { mission: Mission; bloc
               onChange={(event) => setMissionDraft((current) => ({ ...current, is_locked: !event.target.checked }))}
             />
             Mission deverrouillee
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={missionDraft.is_published}
+              onChange={(event) => setMissionDraft((current) => ({ ...current, is_published: event.target.checked }))}
+            />
+            Publiee cote eleves
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <a className="rounded-md border border-border px-4 py-2 text-sm" href={`/preview/${mission.id}`} target="_blank" rel="noreferrer">

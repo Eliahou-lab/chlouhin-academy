@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { TeamAccessGrid } from "@/components/team-access-grid";
 import { EmptyState, PageShell } from "@/components/ui";
-import { getAdminDashboardTeams, getBlockProgress, getBlocks, getMissions } from "@/lib/data";
+import { getAdminDashboardTeams, getBlockProgress, getBlocks, getPublishedMissions } from "@/lib/data";
 import { globalProgress } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [teams, missions, blocks, allProgress] = await Promise.all([getAdminDashboardTeams(), getMissions(), getBlocks(), getBlockProgress()]);
+  const [teams, missions, blocks, allProgress] = await Promise.all([getAdminDashboardTeams(), getPublishedMissions(), getBlocks(), getBlockProgress()]);
   const sortedTeams = [...teams].sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0));
 
   return (

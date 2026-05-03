@@ -4,7 +4,7 @@ import { AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Lock } fr
 import { useEffect, useMemo, useState } from "react";
 import { useReward } from "react-rewards";
 
-import { submitBlockProgressAction } from "@/app/actions/progress";
+import { requestBlockHelpAction, submitBlockProgressAction } from "@/app/actions/progress";
 import { MarkdownPreview } from "@/components/markdown-preview";
 import { Badge, Card } from "@/components/ui";
 import { BlockIcon, blockLabel } from "@/lib/blocks";
@@ -47,6 +47,7 @@ export function BlockRenderer({
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>(progress?.screenshot_urls ?? []);
   const [teamComment, setTeamComment] = useState(progress?.team_comment ?? "");
+  const [helpMessage, setHelpMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -119,6 +120,13 @@ export function BlockRenderer({
     setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : response.correct === null ? "En attente de validation du formateur." : "Bloc enregistre.");
   }
 
+  async function requestHelp() {
+    if (locked || preview || !teamId) return;
+    const response = await requestBlockHelpAction({ teamId, blockId: block.id, message: helpMessage });
+    setMessage(response.ok ? "Demande d'aide envoyée au formateur." : response.error ?? "Demande impossible.");
+    if (response.ok) setHelpMessage("");
+  }
+
   async function uploadScreenshots(files: FileList | File[]) {
     if (!teamId) {
       setMessage("Equipe introuvable.");
@@ -175,7 +183,7 @@ export function BlockRenderer({
   }
 
   return (
-    <Card className={`relative space-y-4 transition ${cardState}`}>
+    <Card className={`relative scroll-mt-24 space-y-4 transition ${cardState}`} id={block.id}>
       <span id={rewardId} className="pointer-events-none absolute left-1/2 top-8" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -215,6 +223,11 @@ export function BlockRenderer({
         <div className="flex items-center gap-2 rounded-md border border-accent-red/40 bg-accent-red/10 p-3 text-sm text-accent-red">
           <AlertCircle className="h-4 w-4" />
           {progress?.formateur_comment ?? "Refuse par le formateur. Tu peux resoumettre."}
+        </div>
+      ) : null}
+      {progress?.needs_help ? (
+        <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
+          Demande d&apos;aide envoyée au formateur.
         </div>
       ) : null}
 
@@ -377,6 +390,22 @@ export function BlockRenderer({
         <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || visualState === "submitted"} onClick={() => submit()}>
           {visualState === "rejected" ? "Resoumettre" : "Valider ce bloc"}
         </button>
+      ) : null}
+      {revealContent && !locked ? (
+        <div className="rounded-lg border border-border bg-surface-2 p-3">
+          <p className="text-sm font-semibold">Bloqué ?</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <input
+              className="h-10 rounded-md border border-border bg-surface px-3 text-sm"
+              placeholder="Message court pour le formateur"
+              value={helpMessage}
+              onChange={(event) => setHelpMessage(event.target.value)}
+            />
+            <button className="rounded-md border border-primary px-3 py-2 text-sm text-primary hover:bg-primary/10" onClick={requestHelp}>
+              Demander de l&apos;aide
+            </button>
+          </div>
+        </div>
       ) : null}
       {message ? <p className="text-sm text-muted">{message}</p> : null}
     </Card>

@@ -32,6 +32,9 @@ export async function validateBlockProgressAction(formData: FormData) {
       points_earned: points,
       formateur_comment: comment || null,
       validated_at: new Date().toISOString(),
+      needs_help: false,
+      help_message: null,
+      help_requested_at: null,
     })
     .eq("id", progressId);
 
@@ -41,6 +44,7 @@ export async function validateBlockProgressAction(formData: FormData) {
   }
 
   revalidatePath("/admin/validate");
+  revalidatePath("/admin/live");
   revalidatePath("/display");
   if (error) console.error("[Supabase error]", error);
 }
@@ -59,10 +63,12 @@ export async function rejectBlockProgressAction(formData: FormData) {
     .update({
       status: "rejected",
       formateur_comment: comment,
+      needs_help: false,
     })
     .eq("id", progressId);
 
   revalidatePath("/admin/validate");
+  revalidatePath("/admin/live");
   revalidatePath("/display");
 }
 

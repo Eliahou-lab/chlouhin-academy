@@ -1,7 +1,7 @@
 import { Badge, Card, EmptyState, PageShell, ProgressBar } from "@/components/ui";
 import { LeaderboardRows } from "@/components/leaderboard-rows";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
-import { getBlockProgress, getBlocks, getDisplayState, getExerciseSubmissions, getExercises, getMissions, getTeams } from "@/lib/data";
+import { getBlockProgress, getBlocks, getDisplayState, getExerciseSubmissions, getExercises, getPublishedMissions, getTeams } from "@/lib/data";
 import { missionProgress } from "@/lib/progress";
 import type { BlockProgressStatus, DisplayMode } from "@/types/database";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DisplayPage({ searchParams }: { searchParams: { mode?: DisplayMode } }) {
   const [teams, missions, blocks, progress, exercises, submissions, displayState] = await Promise.all([
     getTeams(),
-    getMissions(),
+    getPublishedMissions(),
     getBlocks(),
     getBlockProgress(),
     getExercises(),

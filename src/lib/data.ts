@@ -69,6 +69,11 @@ export const getMissions = cache(async (): Promise<Mission[]> => {
   return read(supabase.schema("academy").from("missions").select("*").order("order_index"), []);
 });
 
+export const getPublishedMissions = cache(async (): Promise<Mission[]> => {
+  const supabase = createServerSupabaseClient();
+  return read(supabase.schema("academy").from("missions").select("*").eq("is_published", true).order("order_index"), []);
+});
+
 export const getBlocks = cache(async (): Promise<Block[]> => {
   const supabase = createServerSupabaseClient();
   return read(supabase.schema("academy").from("blocks").select("*").order("order_index"), []);
@@ -108,7 +113,7 @@ export const getTeamBadges = cache(async (): Promise<TeamBadge[]> => {
 export async function getTeamBundle(teamId: string) {
   const [teams, missions, blocks, progress, exercises, submissions, badges, teamBadges] = await Promise.all([
     getTeams(),
-    getMissions(),
+    getPublishedMissions(),
     getBlocks(),
     getBlockProgress(),
     getExercises(),

@@ -30,6 +30,7 @@ create table if not exists academy.missions (
     'sections',
     'free'
   )) default 'all_visible',
+  is_published boolean default true,
   order_index integer not null,
   is_locked boolean default true,
   points_total integer default 100,
@@ -43,6 +44,9 @@ alter table academy.missions
     'sections',
     'free'
   )) default 'all_visible';
+
+alter table academy.missions
+  add column if not exists is_published boolean default true;
 
 drop table if exists academy.steps cascade;
 drop table if exists academy.progress cascade;
@@ -114,6 +118,9 @@ create table if not exists academy.block_progress (
   submitted_at timestamp,
   validated_at timestamp,
   duration_seconds integer,
+  needs_help boolean default false,
+  help_message text,
+  help_requested_at timestamp,
   created_at timestamp default now(),
   updated_at timestamp default now(),
   unique(team_id, block_id)
@@ -273,6 +280,15 @@ create trigger blocks_touch_updated_at
 
 alter table academy.blocks
   add column if not exists parent_block_id uuid references academy.blocks(id) on delete cascade;
+
+alter table academy.block_progress
+  add column if not exists needs_help boolean default false;
+
+alter table academy.block_progress
+  add column if not exists help_message text;
+
+alter table academy.block_progress
+  add column if not exists help_requested_at timestamp;
 
 drop index if exists academy.blocks_mission_order_unique;
 create index if not exists blocks_mission_order_index on academy.blocks (mission_id, parent_block_id, order_index);

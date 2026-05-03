@@ -18,6 +18,7 @@ export default async function AdminPage() {
           <h1 className="font-display text-3xl font-bold">Admin formateur</h1>
           <nav className="flex gap-3 text-sm text-muted">
 	            <Link href="/admin/validate">Validation</Link>
+	            <Link href="/admin/live">Live classe</Link>
 	            <Link href="/admin/teams">Équipes</Link>
 	            <Link href="/admin/missions">Missions</Link>
 	            <Link href="/admin/exercise/new">Nouvel exercice</Link>

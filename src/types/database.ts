@@ -47,6 +47,7 @@ export type Mission = {
   persona_scenario: string | null;
   prompt_windsurf: string | null;
   display_mode: MissionDisplayMode | null;
+  is_published: boolean | null;
   order_index: number;
   is_locked: boolean | null;
   points_total: number | null;
@@ -94,6 +95,9 @@ export type BlockProgress = {
   submitted_at: string | null;
   validated_at: string | null;
   duration_seconds: number | null;
+  needs_help: boolean | null;
+  help_message: string | null;
+  help_requested_at: string | null;
   created_at: string | null;
   updated_at: string | null;
 };

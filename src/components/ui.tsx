@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("rounded-lg border border-border bg-surface p-5", className)}>{children}</div>;
+export function Card({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("rounded-lg border border-border bg-surface p-5", className)} {...props}>{children}</div>;
 }
 
 export function Badge({ children, tone = "indigo" }: { children: React.ReactNode; tone?: "indigo" | "green" | "yellow" | "red" | "muted" }) {
