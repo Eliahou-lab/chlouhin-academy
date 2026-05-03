@@ -86,7 +86,7 @@ export async function saveMissionBuilderAction(payload: MissionSavePayload) {
 }
 
 export async function createMissionAction(formData: FormData) {
-  if (!isAdminAuthorized(formData.get("adminSecret"))) return;
+  if (!isAdminAuthorized(formData.get("adminSecret"))) return { ok: false, error: "Non autorisé" };
 
   const supabase = createAdminSupabaseClient();
   const code = String(formData.get("code") ?? "").trim();
@@ -97,7 +97,16 @@ export async function createMissionAction(formData: FormData) {
   const orderIndex = Number(formData.get("order_index") ?? 99);
   const isLocked = formData.get("is_locked") === "on";
 
-  if (!code || !title) return;
+  if (!code || !title) return { ok: false, error: "Code et titre requis." };
+
+  const existing = await supabase.schema("academy").from("missions").select("id").eq("code", code).maybeSingle();
+  if (existing.error) {
+    console.error("[Supabase error]", existing.error);
+    return { ok: false, error: "Impossible de vérifier le code mission." };
+  }
+  if (existing.data) {
+    return { ok: false, error: `Le code ${code} existe déjà. Utilise un autre code ou modifie la mission existante.` };
+  }
 
   const { data, error } = await supabase
     .schema("academy")
@@ -118,7 +127,7 @@ export async function createMissionAction(formData: FormData) {
 
   if (error || !data) {
     if (error) console.error("[Supabase error]", error);
-    return;
+    return { ok: false, error: error?.message ?? "Création impossible." };
   }
 
   revalidatePath("/admin/missions");

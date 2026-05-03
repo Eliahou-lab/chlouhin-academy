@@ -2,6 +2,7 @@
 
 import { AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useReward } from "react-rewards";
 
 import { submitBlockProgressAction } from "@/app/actions/progress";
 import { MarkdownPreview } from "@/components/markdown-preview";
@@ -49,6 +50,15 @@ export function BlockRenderer({
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const rewardId = `reward-${block.id}`;
+  const { reward } = useReward(rewardId, "emoji", {
+    emoji: ["🎉", "🚀", "⭐"],
+    elementCount: 22,
+    spread: 80,
+    startVelocity: 24,
+    elementSize: 28,
+    zIndex: 80,
+  });
   const options = useMemo(() => parseArray<Option>(block.options), [block.options]);
   const richItems = useMemo(() => parseArray<RichContentItem>(block.options), [block.options]);
   const checklistItems = useMemo(() => parseArray<ChecklistItem>(block.checklist_items), [block.checklist_items]);
@@ -68,12 +78,13 @@ export function BlockRenderer({
     if (window.sessionStorage.getItem(key)) return;
     window.sessionStorage.setItem(key, "1");
     playSound("validated");
+    reward();
     if (block.type === "screenshot") celebrateScreenshotValidated();
     if (isLastGate) {
       celebrateMissionComplete();
       playSound("mission_complete");
     }
-  }, [block.type, isLastGate, progress?.id, progress?.status]);
+  }, [block.type, isLastGate, progress?.id, progress?.status, reward]);
 
   async function submit(nextAnswer = answer) {
     if (locked) return;
@@ -96,6 +107,7 @@ export function BlockRenderer({
     }
     if (response.correct) {
       playSound("correct");
+      reward();
       if (block.type === "qcm" && "attempts" in response && response.attempts === 1) celebrateQcmFirstTry();
       if (isLastGate) {
         celebrateMissionComplete();
@@ -163,7 +175,8 @@ export function BlockRenderer({
   }
 
   return (
-    <Card className={`space-y-4 transition ${cardState}`}>
+    <Card className={`relative space-y-4 transition ${cardState}`}>
+      <span id={rewardId} className="pointer-events-none absolute left-1/2 top-8" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-md border border-border bg-surface-2 p-2">
