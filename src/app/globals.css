@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Mono", "SFMono-Regular", Consolas, monospace;
+  --background: #0a0a0f;
+  --surface: #13131a;
+  --surface-2: #1a1a24;
+  --border: #1e1e2e;
+  --accent: #6366f1;
+  --accent-green: #22c55e;
+  --accent-yellow: #eab308;
+  --accent-red: #ef4444;
+  --text-primary: #f8fafc;
+  --text-muted: #64748b;
+  --radius: 0.5rem;
+}
+
+html.light {
+  --background: #f7f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef0f7;
+  --border: #d8dceb;
+  --accent: #4f46e5;
+  --accent-green: #16a34a;
+  --accent-yellow: #ca8a04;
+  --accent-red: #dc2626;
+  --text-primary: #111827;
+  --text-muted: #64748b;
+}
+
+* {
+  color-scheme: dark;
+}
+
+html.light * {
+  color-scheme: light;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-inter);
+}
+
+button,
+input,
+textarea,
+select {
+  color: var(--text-primary);
+}
+
+input,
+textarea,
+select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+::placeholder {
+  color: var(--text-muted);
+}
+
+.mission-grid {
+  background-image:
+    linear-gradient(rgba(248, 250, 252, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(248, 250, 252, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+html.light .mission-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+}
+
+.animate-pop {
+  animation: pop 420ms cubic-bezier(0.2, 0.9, 0.2, 1.2);
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
