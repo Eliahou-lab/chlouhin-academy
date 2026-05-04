@@ -51,6 +51,8 @@ export function BlockRenderer({
   const [teamComment, setTeamComment] = useState(progress?.team_comment ?? "");
   const [helpMessage, setHelpMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [helping, setHelping] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pointsFlash, setPointsFlash] = useState<number | null>(null);
@@ -92,49 +94,60 @@ export function BlockRenderer({
   }, [block.type, isLastGate, progress?.id, progress?.status, reward]);
 
   async function submit(nextAnswer = answer) {
-    if (locked) return;
+    if (locked || submitting) return;
     if (preview) {
       setMessage("Preview locale: aucune donnee sauvegardee.");
       return;
     }
     if (!teamId) return;
-    const response = await submitBlockProgressAction({
-      teamId,
-      blockId: block.id,
-      answer: block.type === "qcm" ? selected.join(",") : nextAnswer,
-      checklistState: checklist,
-      screenshotUrls: block.type === "screenshot" ? screenshotUrls : [],
-      teamComment,
-    });
-    if (!response.ok) {
-      setMessage(response.error ?? response.message ?? "Action refusee.");
-      return;
-    }
-    if (response.correct) {
-      playSound("correct");
-      if (block.type === "qcm" || isLastGate) reward();
-      if ("points" in response && typeof response.points === "number" && response.points > 0) {
-        setPointsFlash(response.points);
-        setTimeout(() => setPointsFlash(null), 1800);
+    setSubmitting(true);
+    setMessage("Validation en cours...");
+    try {
+      const response = await submitBlockProgressAction({
+        teamId,
+        blockId: block.id,
+        answer: block.type === "qcm" ? selected.join(",") : nextAnswer,
+        checklistState: checklist,
+        screenshotUrls: block.type === "screenshot" ? screenshotUrls : [],
+        teamComment,
+      });
+      if (!response.ok) {
+        setMessage(response.error ?? response.message ?? "Action refusee.");
+        return;
       }
-      if (block.type === "qcm" && "attempts" in response && response.attempts === 1) celebrateQcmFirstTry();
-      if (isLastGate) {
-        celebrateMissionComplete();
-        playSound("mission_complete");
+      if (response.correct) {
+        playSound("correct");
+        if (block.type === "qcm" || isLastGate) reward();
+        if ("points" in response && typeof response.points === "number" && response.points > 0) {
+          setPointsFlash(response.points);
+          setTimeout(() => setPointsFlash(null), 1800);
+        }
+        if (block.type === "qcm" && "attempts" in response && response.attempts === 1) celebrateQcmFirstTry();
+        if (isLastGate) {
+          celebrateMissionComplete();
+          playSound("mission_complete");
+        }
+      } else if (response.correct === false) {
+        playSound("wrong");
       }
-    } else if (response.correct === false) {
-      playSound("wrong");
+      setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : response.correct === null ? "En attente de validation du formateur." : "Bloc enregistre.");
+      router.refresh();
+    } finally {
+      window.setTimeout(() => setSubmitting(false), 600);
     }
-    setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : response.correct === null ? "En attente de validation du formateur." : "Bloc enregistre.");
-    router.refresh();
   }
 
   async function requestHelp() {
-    if (locked || preview || !teamId) return;
-    const response = await requestBlockHelpAction({ teamId, blockId: block.id, message: helpMessage });
-    setMessage(response.ok ? "Demande d'aide envoyée au formateur." : response.error ?? "Demande impossible.");
-    if (response.ok) setHelpMessage("");
-    router.refresh();
+    if (locked || preview || !teamId || helping) return;
+    setHelping(true);
+    try {
+      const response = await requestBlockHelpAction({ teamId, blockId: block.id, message: helpMessage });
+      setMessage(response.ok ? "Demande d'aide envoyée au formateur." : response.error ?? "Demande impossible.");
+      if (response.ok) setHelpMessage("");
+      router.refresh();
+    } finally {
+      setHelping(false);
+    }
   }
 
   async function uploadScreenshots(files: FileList | File[]) {
@@ -398,8 +411,8 @@ export function BlockRenderer({
           ) : null}
           <p className="text-sm text-muted">{block.video_must_complete ? "A regarder jusqu au bout." : "Video informative."}</p>
           {block.video_must_complete ? (
-            <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked} onClick={() => submit("video-ended")}>
-              J ai termine la video
+            <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || submitting} onClick={() => submit("video-ended")}>
+              {submitting ? "Validation..." : "J ai termine la video"}
             </button>
           ) : null}
         </div>
@@ -422,12 +435,12 @@ export function BlockRenderer({
       ) : null}
 
       {revealContent && block.type === "theory" ? (
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked} onClick={() => submit("read")}>
-          J&apos;ai lu
+        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || submitting} onClick={() => submit("read")}>
+          {submitting ? "Validation..." : "J&apos;ai lu"}
         </button>
       ) : revealContent && (block.is_blocking || ["url", "screenshot", "checklist", "code_execute"].includes(block.type)) ? (
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || visualState === "submitted"} onClick={() => submit()}>
-          {visualState === "rejected" ? "Resoumettre" : "Valider ce bloc"}
+        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || visualState === "submitted" || submitting} onClick={() => submit()}>
+          {submitting ? "Validation..." : visualState === "rejected" ? "Resoumettre" : "Valider ce bloc"}
         </button>
       ) : null}
       {revealContent && !locked ? (
@@ -440,8 +453,8 @@ export function BlockRenderer({
               value={helpMessage}
               onChange={(event) => setHelpMessage(event.target.value)}
             />
-            <button className="rounded-md border border-primary px-3 py-2 text-sm text-primary hover:bg-primary/10" onClick={requestHelp}>
-              Demander de l&apos;aide
+            <button className="rounded-md border border-primary px-3 py-2 text-sm text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50" disabled={helping} onClick={requestHelp}>
+              {helping ? "Envoi..." : "Demander de l&apos;aide"}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { BlockRenderer } from "@/components/block-renderer";
 import { MissionFocusControls } from "@/components/mission-focus-controls";
@@ -50,6 +51,9 @@ export default async function MissionPage({ params }: { params: { id: string; co
               <div className="mb-1 text-right text-xs text-muted">{completion.percent}%</div>
               <ProgressBar value={completion.percent} />
             </div>
+            <Link className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-2 hover:text-white" href={`/team/${team.id}`}>
+              Retour équipe
+            </Link>
           </div>
         </div>
         <header className="border-b border-border pb-5">
