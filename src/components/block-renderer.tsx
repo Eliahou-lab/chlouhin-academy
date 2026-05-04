@@ -33,6 +33,7 @@ export function BlockRenderer({
   isLastGate = false,
   preview = false,
   revealContent = true,
+  onCompleted,
 }: {
   block: Block;
   teamId?: string;
@@ -42,6 +43,7 @@ export function BlockRenderer({
   isLastGate?: boolean;
   preview?: boolean;
   revealContent?: boolean;
+  onCompleted?: (blockId: string) => void;
 }) {
   const router = useRouter();
   const [answer, setAnswer] = useState(progress?.answer ?? "");
@@ -130,8 +132,13 @@ export function BlockRenderer({
       } else if (response.correct === false) {
         playSound("wrong");
       }
-      setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : response.correct === null ? "En attente de validation du formateur." : "Bloc enregistre.");
-      router.refresh();
+      const successMessage = response.correct === null ? "En attente de validation du formateur." : "Étape complétée.";
+      setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : successMessage);
+      if (response.correct !== false && response.correct !== null) {
+        onCompleted?.(block.id);
+      } else {
+        router.refresh();
+      }
     } finally {
       window.setTimeout(() => setSubmitting(false), 600);
     }
