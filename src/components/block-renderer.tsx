@@ -49,7 +49,9 @@ export function BlockRenderer({
   const [teamComment, setTeamComment] = useState(progress?.team_comment ?? "");
   const [helpMessage, setHelpMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pointsFlash, setPointsFlash] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const rewardId = `reward-${block.id}`;
   const { reward } = useReward(rewardId, "emoji", {
@@ -109,6 +111,10 @@ export function BlockRenderer({
     if (response.correct) {
       playSound("correct");
       reward();
+      if ("points" in response && typeof response.points === "number" && response.points > 0) {
+        setPointsFlash(response.points);
+        setTimeout(() => setPointsFlash(null), 1800);
+      }
       if (block.type === "qcm" && "attempts" in response && response.attempts === 1) celebrateQcmFirstTry();
       if (isLastGate) {
         celebrateMissionComplete();
@@ -133,6 +139,16 @@ export function BlockRenderer({
       return;
     }
     const selectedFiles = Array.from(files);
+    const oversized = selectedFiles.find((file) => file.size > 5 * 1024 * 1024);
+    const invalidType = selectedFiles.find((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type));
+    if (oversized) {
+      setMessage(`Image trop lourde : ${oversized.name}. Maximum 5Mo.`);
+      return;
+    }
+    if (invalidType) {
+      setMessage(`Format refusé : ${invalidType.name}. Utilise PNG, JPEG ou WebP.`);
+      return;
+    }
     const validFiles = selectedFiles.filter((file) => ["image/png", "image/jpeg", "image/webp"].includes(file.type) && file.size <= 5 * 1024 * 1024);
     if (validFiles.length !== selectedFiles.length) {
       setMessage("Images PNG, JPEG ou WebP uniquement, 5Mo max.");
@@ -161,7 +177,7 @@ export function BlockRenderer({
         }),
       );
       setScreenshotUrls((current) => [...current, ...urls]);
-      setMessage("Screenshot uploadé.");
+      setMessage(`${urls.length} screenshot${urls.length > 1 ? "s" : ""} uploadé${urls.length > 1 ? "s" : ""}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Upload impossible.");
     } finally {
@@ -200,6 +216,11 @@ export function BlockRenderer({
           <Badge tone={block.is_blocking ? "yellow" : "muted"}>{block.is_blocking ? `${block.points ?? 0} pts` : "Info"}</Badge>
         </div>
       </div>
+      {pointsFlash ? (
+        <div className="pointer-events-none absolute right-4 top-4 animate-pop rounded-full border border-accent-green bg-accent-green/20 px-4 py-2 font-display text-lg text-accent-green">
+          +{pointsFlash} pts
+        </div>
+      ) : null}
 
       {locked ? (
         <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 p-3 text-sm text-muted">
@@ -228,6 +249,20 @@ export function BlockRenderer({
       {progress?.needs_help ? (
         <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
           Demande d&apos;aide envoyée au formateur.
+        </div>
+      ) : null}
+      {block.hint_text ? (
+        <div className="rounded-lg border border-border bg-surface-2 p-3">
+          {showHint ? (
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-accent-yellow">Indice</p>
+              <p className="mt-2 text-sm">{block.hint_text}</p>
+            </div>
+          ) : (
+            <button className="text-sm text-accent-yellow hover:text-white" onClick={() => setShowHint(true)}>
+              Voir l&apos;indice{block.hint_cost_points ? ` (-${block.hint_cost_points} pts)` : ""}
+            </button>
+          )}
         </div>
       ) : null}
 

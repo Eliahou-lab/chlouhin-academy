@@ -65,6 +65,8 @@ export type Block = {
   options: Json | null;
   correct_answer: string | null;
   feedback_wrong: string | null;
+  hint_text: string | null;
+  hint_cost_points: number | null;
   checklist_items: Json | null;
   video_url: string | null;
   video_must_complete: boolean | null;

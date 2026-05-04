@@ -75,6 +75,8 @@ create table if not exists academy.blocks (
   options jsonb,
   correct_answer text,
   feedback_wrong text,
+  hint_text text,
+  hint_cost_points integer default 0,
   checklist_items jsonb,
   video_url text,
   video_must_complete boolean default false,
@@ -89,6 +91,12 @@ create table if not exists academy.blocks (
 
 alter table academy.blocks
   add column if not exists parent_block_id uuid references academy.blocks(id) on delete cascade;
+
+alter table academy.blocks
+  add column if not exists hint_text text;
+
+alter table academy.blocks
+  add column if not exists hint_cost_points integer default 0;
 
 create index if not exists blocks_mission_order_index on academy.blocks (mission_id, parent_block_id, order_index);
 

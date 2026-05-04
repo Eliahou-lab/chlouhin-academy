@@ -408,6 +408,13 @@ function BlockForm({ block, onChange }: { block: DraftBlock; onChange: (patch: P
         </div>
       ) : null}
 
+      {block.type !== "separator" && block.type !== "subtask" ? (
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <Field label="Indice optionnel" value={block.hint_text ?? ""} onChange={(hint_text) => onChange({ hint_text })} />
+          <NumberField label="Coût indice" value={block.hint_cost_points ?? 0} onChange={(hint_cost_points) => onChange({ hint_cost_points })} />
+        </div>
+      ) : null}
+
       {block.type === "subtask" ? <Area label="Description courte" value={block.content ?? ""} onChange={(content) => onChange({ content })} /> : null}
       {block.type === "rich_content" ? (
         <div className="space-y-4">
@@ -769,6 +776,8 @@ function toEditableBlock(block: Block): EditableBlock {
     options: block.options,
     correct_answer: block.correct_answer,
     feedback_wrong: block.feedback_wrong,
+    hint_text: block.hint_text,
+    hint_cost_points: block.hint_cost_points,
     checklist_items: block.checklist_items,
     video_url: block.video_url,
     video_must_complete: block.video_must_complete,
@@ -793,6 +802,8 @@ function newBlock(type: BlockType, title: string, orderIndex: number, parentBloc
     options: type === "qcm" ? ([{ label: "Option 1", isCorrect: true }, { label: "Option 2", isCorrect: false }] as Json) : type === "rich_content" ? (defaultRichItems() as Json) : null,
     correct_answer: "",
     feedback_wrong: "",
+    hint_text: "",
+    hint_cost_points: 0,
     checklist_items: type === "checklist" ? ([{ id: crypto.randomUUID(), label: "Item a cocher" }] as Json) : null,
     video_url: "",
     video_must_complete: false,

@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { forwardRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function Card({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-lg border border-border bg-surface p-5", className)} {...props}>{children}</div>;
-}
+export const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function Card({ children, className, ...props }, ref) {
+  return <div ref={ref} className={cn("rounded-lg border border-border bg-surface p-5", className)} {...props}>{children}</div>;
+});
 
 export function Badge({ children, tone = "indigo" }: { children: React.ReactNode; tone?: "indigo" | "green" | "yellow" | "red" | "muted" }) {
   const tones = {

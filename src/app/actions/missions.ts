@@ -19,6 +19,8 @@ export type EditableBlock = Omit<
   | "options"
   | "correct_answer"
   | "feedback_wrong"
+  | "hint_text"
+  | "hint_cost_points"
   | "checklist_items"
   | "video_url"
   | "video_must_complete"
@@ -151,6 +153,28 @@ export async function toggleMissionPublishedAction(formData: FormData) {
   revalidatePath("/display");
 }
 
+export async function reorderMissionsAction(payload: { missionIds: string[]; adminSecret?: string }) {
+  if (!isAdminAuthorized(payload.adminSecret)) return adminDenied();
+
+  const supabase = createAdminSupabaseClient();
+  for (const [index, missionId] of payload.missionIds.entries()) {
+    const { error } = await supabase
+      .schema("academy")
+      .from("missions")
+      .update({ order_index: index + 1 })
+      .eq("id", missionId);
+    if (error) {
+      console.error("[Supabase error]", error);
+      return { ok: false, error: error.message };
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/missions");
+  revalidatePath("/display");
+  return { ok: true };
+}
+
 export async function duplicateMissionAction(formData: FormData) {
   if (!isAdminAuthorized(formData.get("adminSecret"))) return;
   const missionId = String(formData.get("missionId") ?? "");
@@ -216,6 +240,8 @@ export async function duplicateMissionAction(formData: FormData) {
       options: block.options,
       correct_answer: block.correct_answer,
       feedback_wrong: block.feedback_wrong,
+      hint_text: block.hint_text,
+      hint_cost_points: block.hint_cost_points,
       checklist_items: block.checklist_items,
       video_url: block.video_url,
       video_must_complete: block.video_must_complete,
@@ -244,6 +270,8 @@ function sanitizeBlock(block: EditableBlock, missionId: string, orderIndex: numb
     options: (block.options ?? null) as Json,
     correct_answer: block.correct_answer || null,
     feedback_wrong: block.feedback_wrong || null,
+    hint_text: block.hint_text || null,
+    hint_cost_points: block.hint_cost_points ?? 0,
     checklist_items: (block.checklist_items ?? null) as Json,
     video_url: block.video_url || null,
     video_must_complete: Boolean(block.video_must_complete),
