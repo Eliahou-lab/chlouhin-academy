@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useReward } from "react-rewards";
 
@@ -42,6 +43,7 @@ export function BlockRenderer({
   preview?: boolean;
   revealContent?: boolean;
 }) {
+  const router = useRouter();
   const [answer, setAnswer] = useState(progress?.answer ?? "");
   const [selected, setSelected] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
@@ -110,7 +112,7 @@ export function BlockRenderer({
     }
     if (response.correct) {
       playSound("correct");
-      reward();
+      if (block.type === "qcm" || isLastGate) reward();
       if ("points" in response && typeof response.points === "number" && response.points > 0) {
         setPointsFlash(response.points);
         setTimeout(() => setPointsFlash(null), 1800);
@@ -124,6 +126,7 @@ export function BlockRenderer({
       playSound("wrong");
     }
     setMessage(response.correct === false ? block.feedback_wrong ?? "Reponse incorrecte." : response.correct === null ? "En attente de validation du formateur." : "Bloc enregistre.");
+    router.refresh();
   }
 
   async function requestHelp() {
@@ -131,6 +134,7 @@ export function BlockRenderer({
     const response = await requestBlockHelpAction({ teamId, blockId: block.id, message: helpMessage });
     setMessage(response.ok ? "Demande d'aide envoyée au formateur." : response.error ?? "Demande impossible.");
     if (response.ok) setHelpMessage("");
+    router.refresh();
   }
 
   async function uploadScreenshots(files: FileList | File[]) {
